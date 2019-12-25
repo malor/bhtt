@@ -1,0 +1,21 @@
+[package]
+name = "bhtt"
+version = "0.1.0"
+authors = ["Roman Podoliaka <roman.podoliaka@gmail.com>"]
+edition = "2018"
+readme = "README.md"
+license = "MIT"
+
+[dependencies]
+ordered-float = "1.0"
+superslice = "1"
+
+[dev-dependencies]
+approx = "0.3.2"
+criterion = "0.3.0"
+test-case = "1.0.0"
+utilities = { path = "utilities" }
+
+[[bench]]
+name = "histogram"
+harness = false
