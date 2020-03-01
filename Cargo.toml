@@ -19,3 +19,6 @@ utilities = { path = "utilities" }
 [[bench]]
 name = "histogram"
 harness = false
+
+[profile.release]
+debug = true
