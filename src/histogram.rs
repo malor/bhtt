@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 
-use ordered_float::NotNan;
+use ordered_float::OrderedFloat;
 use superslice::*;
 
 use super::bin::Bin;
@@ -227,7 +227,7 @@ impl Histogram {
             .min_by_key(|i| {
                 (
                     // distance between values is considered first
-                    NotNan::new((self.bins[*i].value() - self.bins[*i - 1].value()).abs()).unwrap(),
+                    OrderedFloat((self.bins[*i].value() - self.bins[*i - 1].value()).abs()),
                     // if distances are equal, a pair of bins with smaller total count is preferred
                     self.bins[i - 1].count() + self.bins[*i].count(),
                 )
