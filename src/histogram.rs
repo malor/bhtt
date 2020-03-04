@@ -186,15 +186,31 @@ impl Histogram {
 
     /// Update the histogram by inserting a new value.
     pub fn update(&mut self, value: f64) {
-        let new_bin = Bin::new(value, 1);
+        self.update_bin(&Bin::new(value, 1));
+    }
 
+    /// Update the histogram by inserting a new bin.
+    pub fn update_bin(&mut self, bin: &Bin) {
         // insert the new bin preserving the ascending order. If the total number of bins exceeds
         // the configured size, the histogram is shrinked by merging two closest bins to restore
         // the invariant
-        self.bins.insert(self.bins.upper_bound(&new_bin), new_bin);
+        self.bins.insert(self.bins.upper_bound(bin), *bin);
         self.shrink();
+        self.track_min_max(bin.value());
+    }
 
-        self.track_min_max(value);
+    /// Merge the histogram with another one (in-place).
+    pub fn merge(&mut self, other: &Histogram) {
+        for bin in other.bins() {
+            self.update_bin(bin);
+        }
+
+        if let Some(min_value) = other.min() {
+            self.track_min_max(min_value);
+        }
+        if let Some(max_value) = other.max() {
+            self.track_min_max(max_value);
+        }
     }
 
     /// Keep track of the minimum and the maximum inserted values
@@ -348,6 +364,100 @@ mod tests {
         assert_eq!(h.min(), Some(42.0));
         assert_eq!(h.max(), Some(42.0));
         assert_eq!(h.bins(), &[Bin::new(42.0, 1)]);
+    }
+
+    #[test]
+    fn update_bin() {
+        let bins = vec![
+            Bin::new(4.9, 6),
+            Bin::new(5.0, 8),
+            Bin::new(20.1, 7),
+            Bin::new(4.0, 8),
+            Bin::new(42.0, 14),
+            Bin::new(17.4, 4),
+            Bin::new(-10.0, 1),
+        ];
+        let expected_bins = vec![
+            Bin::new(-10.0, 1),
+            Bin::new(4.609090909090909, 22),
+            Bin::new(17.4, 4),
+            Bin::new(20.1, 7),
+            Bin::new(42.0, 14),
+        ];
+
+        let mut h = Histogram::new(5);
+        for bin in &bins {
+            h.update_bin(bin);
+        }
+
+        assert_eq!(h.count(), 48);
+        assert_eq!(h.size(), 5);
+        assert_eq!(h.min(), Some(-10.0));
+        assert_eq!(h.max(), Some(42.0));
+        assert_eq!(h.bins(), &expected_bins);
+    }
+
+    #[test]
+    fn update_single_bin() {
+        let mut h = Histogram::new(5);
+        h.update_bin(&Bin::new(42.0, 84));
+
+        assert_eq!(h.count(), 84);
+        assert_eq!(h.size(), 5);
+        assert_eq!(h.min(), Some(42.0));
+        assert_eq!(h.max(), Some(42.0));
+        assert_eq!(h.bins(), &[Bin::new(42.0, 84)]);
+    }
+
+    #[test]
+    fn merge() {
+        let bins1 = vec![
+            Bin::new(-6.0, 3),
+            Bin::new(-2.1, 1),
+            Bin::new(0.5, 4),
+            Bin::new(4.041666666666667, 3),
+            Bin::new(8.725, 4),
+        ];
+        let mut h1 = Histogram::from_parts(5, bins1, Some(-6.6), Some(10.0));
+
+        let bins2 = vec![
+            Bin::new(33.32588794226721, 9977),
+            Bin::new(1255.8137647058825, 17),
+            Bin::new(3364.983, 2),
+            Bin::new(5361.3435, 2),
+            Bin::new(7349.9465, 2),
+        ];
+        let h2 = Histogram::from_parts(5, bins2, Some(9.48), Some(7829.851));
+
+        let expected_bins = vec![
+            Bin::new(33.27875390312249, 9992),
+            Bin::new(1255.8137647058825, 17),
+            Bin::new(3364.983, 2),
+            Bin::new(5361.3435, 2),
+            Bin::new(7349.9465, 2),
+        ];
+
+        h1.merge(&h2);
+
+        assert_eq!(h1.count(), 10015);
+        assert_eq!(h1.size(), 5);
+        assert_eq!(h1.min(), Some(-6.6));
+        assert_eq!(h1.max(), Some(7829.851));
+        assert_eq!(h1.bins(), &expected_bins);
+    }
+
+    #[test]
+    fn merge_empty() {
+        let mut h1 = Histogram::new(5);
+        let h2 = Histogram::new(10);
+
+        h1.merge(&h2);
+
+        assert_eq!(h1.count(), 0);
+        assert_eq!(h1.size(), 5);
+        assert_eq!(h1.min(), None);
+        assert_eq!(h1.max(), None);
+        assert_eq!(h1.bins(), &[]);
     }
 
     #[test]
