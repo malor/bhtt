@@ -4,7 +4,7 @@ use bhtt::histogram::Histogram;
 
 const HISTOGRAM_SIZES: [usize; 6] = [8, 16, 32, 64, 128, 256];
 
-fn update(c: &mut Criterion) {
+fn insert(c: &mut Criterion) {
     let dataset = utilities::Dataset::from_file("utilities/testdata/pings.txt").unwrap();
 
     let mut group = c.benchmark_group("update_histogram_of_size_X_10000_times");
@@ -13,7 +13,7 @@ fn update(c: &mut Criterion) {
             b.iter(|| {
                 let mut h = Histogram::new(size);
                 for v in dataset.values() {
-                    h.update(black_box(*v));
+                    h.insert(black_box(*v));
                 }
             });
         });
@@ -33,5 +33,5 @@ fn from_iter(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, update, from_iter);
+criterion_group!(benches, insert, from_iter);
 criterion_main!(benches);

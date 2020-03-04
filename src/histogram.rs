@@ -42,7 +42,7 @@ use super::bin::Bin;
 /// // create a new Histogram and insert some values
 /// let mut h = Histogram::new(5);
 /// for value in values {
-///     h.update(value);
+///     h.insert(value);
 /// }
 ///
 /// // histogram keeps track of the total count of inserted values,
@@ -115,7 +115,7 @@ impl Histogram {
         let mut h = Histogram::new(size);
 
         for v in iter.into_iter() {
-            h.update(*v.borrow());
+            h.insert(*v.borrow());
         }
 
         h
@@ -185,12 +185,12 @@ impl Histogram {
     }
 
     /// Update the histogram by inserting a new value.
-    pub fn update(&mut self, value: f64) {
-        self.update_bin(&Bin::new(value, 1));
+    pub fn insert(&mut self, value: f64) {
+        self.insert_bin(&Bin::new(value, 1));
     }
 
     /// Update the histogram by inserting a new bin.
-    pub fn update_bin(&mut self, bin: &Bin) {
+    pub fn insert_bin(&mut self, bin: &Bin) {
         // insert the new bin preserving the ascending order. If the total number of bins exceeds
         // the configured size, the histogram is shrinked by merging two closest bins to restore
         // the invariant
@@ -202,7 +202,7 @@ impl Histogram {
     /// Merge the histogram with another one (in-place).
     pub fn merge(&mut self, other: &Histogram) {
         for bin in other.bins() {
-            self.update_bin(bin);
+            self.insert_bin(bin);
         }
 
         if let Some(min_value) = other.min() {
@@ -330,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    fn update() {
+    fn insert() {
         let values = vec![
             1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2, -6.0, -6.6, 0.5, 0.5, 2.625,
         ];
@@ -344,7 +344,7 @@ mod tests {
 
         let mut h = Histogram::new(5);
         for v in &values {
-            h.update(*v);
+            h.insert(*v);
         }
 
         assert_eq!(h.count(), values.len() as u64);
@@ -355,9 +355,9 @@ mod tests {
     }
 
     #[test]
-    fn update_single_value() {
+    fn insert_single_value() {
         let mut h = Histogram::new(5);
-        h.update(42.0);
+        h.insert(42.0);
 
         assert_eq!(h.count(), 1);
         assert_eq!(h.size(), 5);
@@ -367,7 +367,7 @@ mod tests {
     }
 
     #[test]
-    fn update_bin() {
+    fn insert_bin() {
         let bins = vec![
             Bin::new(4.9, 6),
             Bin::new(5.0, 8),
@@ -387,7 +387,7 @@ mod tests {
 
         let mut h = Histogram::new(5);
         for bin in &bins {
-            h.update_bin(bin);
+            h.insert_bin(bin);
         }
 
         assert_eq!(h.count(), 48);
@@ -398,9 +398,9 @@ mod tests {
     }
 
     #[test]
-    fn update_single_bin() {
+    fn insert_single_bin() {
         let mut h = Histogram::new(5);
-        h.update_bin(&Bin::new(42.0, 84));
+        h.insert_bin(&Bin::new(42.0, 84));
 
         assert_eq!(h.count(), 84);
         assert_eq!(h.size(), 5);
