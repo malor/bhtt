@@ -56,6 +56,11 @@ use super::bin::Bin;
 /// assert_eq!(h.quantile(0.0), Some(-5.4));
 /// assert_eq!(h.quantile(0.5), Some(4.75));
 /// assert_eq!(h.quantile(1.0), Some(10.0));
+///
+/// // or estimated counts of values less than or equal to the given value
+/// assert_eq!(h.count_less_than_or_equal_to(-7.4), 0);
+/// assert_eq!(h.count_less_than_or_equal_to(5.0), 5);
+/// assert_eq!(h.count_less_than_or_equal_to(13.0), 10);
 /// ```
 #[derive(Debug)]
 pub struct Histogram {
@@ -181,6 +186,60 @@ impl Histogram {
                     }
                 }
             }
+        }
+    }
+
+    /// Returns an estimate of the number of values in the histogram that are less than or equal to
+    /// `value`.
+    pub fn count_less_than_or_equal_to(&self, value: f64) -> u64 {
+        assert!(!value.is_nan(), "value must not be NaN");
+
+        let total_count = self.count();
+        if total_count == 0 || value < self.min().unwrap_or(std::f64::NAN) {
+            // histogram is empty, or the interval (-inf; value] does not intersect
+            // with the interval [min; max]
+            0
+        } else if value >= self.max().unwrap_or(std::f64::NAN) {
+            // the interval (-inf; value] includes all the values in the histogram
+            total_count
+        } else {
+            // Algorithm 3: Sum Procedure (from the paper mentioned in the description)
+            //
+            // In order to estimate the number of values in the histogram that are less than or
+            // equal to the given value we need to find a pair of bins, which would be adjacent to
+            // the (value, count) bin if we were to insert it to the histogram. The resulting count
+            // will be equal to the sum of the following components:
+            //
+            // 1) sum of counts of the bins preceeding the left neighbour
+            // 2) one half of left neighbour's count
+            // 3) count of values between the left neighbour and the (value, count) bin
+
+            // find the position of the bin if we were to insert it to the histogram
+            let pos = self.bins.upper_bound(&Bin::new(value, 0));
+
+            // calculate the sum of counts of the bins preceeding the left neighbour of that bin
+            let left = pos.checked_sub(1).unwrap_or(0);
+            let count_up_to_left: u64 = self.bins[..left].iter().map(|bin| bin.count()).sum();
+
+            // determine the bordering bins
+            let (left_bin, right_bin) = self.get_bordering_bins(pos);
+            let left_value = left_bin.value();
+            let left_count = left_bin.count() as f64;
+            let right_value = right_bin.value();
+            let right_count = right_bin.count() as f64;
+
+            // estimate the count of values between the left neighbour and the (value, count) bins
+            let count_left_to_value = if right_value - left_value <= 0.0 {
+                0.0
+            } else {
+                let proximity_to_right = (value - left_value) / (right_value - left_value);
+                let count = left_count + (right_count - left_count) * proximity_to_right;
+
+                (left_count + count) / 2.0 * proximity_to_right
+            };
+
+            // add up all partial counts and round to the nearest integer number
+            (count_up_to_left as f64 + left_count / 2.0 + count_left_to_value).round() as u64
         }
     }
 
@@ -556,5 +615,46 @@ mod tests {
         assert_eq!(h.index_of_cumulative_count_less_than(22.0), (3, 21.5));
         assert_eq!(h.index_of_cumulative_count_less_than(60.0), (5, 50.0));
         assert_eq!(h.index_of_cumulative_count_less_than(70.0), (5, 50.0));
+    }
+
+    #[test]
+    fn count_less_than_or_equal_to_empty() {
+        let h = Histogram::new(5);
+
+        assert_eq!(h.count_less_than_or_equal_to(-42.0), 0);
+        assert_eq!(h.count_less_than_or_equal_to(0.0), 0);
+        assert_eq!(h.count_less_than_or_equal_to(42.0), 0);
+        assert_eq!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), 0);
+        assert_eq!(h.count_less_than_or_equal_to(std::f64::INFINITY), 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "value must not be NaN")]
+    fn count_less_than_or_equal_to_nan() {
+        let h = Histogram::new(5);
+        h.count_less_than_or_equal_to(std::f64::NAN);
+    }
+
+    #[test]
+    fn count_less_than_or_equal_to() {
+        let bins = vec![
+            Bin::new(2.0, 1),
+            Bin::new(9.5, 2),
+            Bin::new(19.33, 3),
+            Bin::new(32.67, 3),
+            Bin::new(45.0, 1),
+        ];
+        let h = Histogram::from_parts(5, bins, Some(2.0), Some(45.0));
+
+        assert_eq!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), 0);
+        assert_eq!(h.count_less_than_or_equal_to(-42.0), 0);
+        assert_eq!(h.count_less_than_or_equal_to(0.0), 0);
+        assert_eq!(h.count_less_than_or_equal_to(2.1), 1);
+        assert_eq!(h.count_less_than_or_equal_to(10.0), 2);
+        assert_eq!(h.count_less_than_or_equal_to(15.0), 3);
+        assert_eq!(h.count_less_than_or_equal_to(25.0), 6);
+        assert_eq!(h.count_less_than_or_equal_to(38.0), 9);
+        assert_eq!(h.count_less_than_or_equal_to(45.0), 10);
+        assert_eq!(h.count_less_than_or_equal_to(std::f64::INFINITY), 10);
     }
 }
