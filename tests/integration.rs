@@ -3,7 +3,7 @@ extern crate approx;
 
 use test_case::test_case;
 
-use bhtt::histogram::Histogram;
+use bhtt::Histogram;
 
 // dataset, histogram size, expected diff between true and approximated quantiles
 #[test_case("utilities/testdata/pings.txt", 32, 0.5)]

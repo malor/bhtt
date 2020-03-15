@@ -3,7 +3,7 @@ use ordered_float::NotNan;
 /// Histogram bin stored as a (value, count) pair.
 ///
 /// ```
-/// use bhtt::bin::Bin;
+/// use bhtt::Bin;
 ///
 /// // Create a Bin with the value of 42.0 and the count of 84
 /// let b1 = Bin::new(42.0, 84);

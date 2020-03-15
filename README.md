@@ -33,7 +33,7 @@ histogram from another bin by bin to get a difference between two.
 ## Examples
 
 ```rust
-use bhtt::histogram::Histogram;
+use bhtt::Histogram;
 
 let values = vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2];
 
@@ -55,7 +55,7 @@ assert_eq!(h.quantile(0.0), Some(-5.4));
 assert_eq!(h.quantile(0.5), Some(4.75));
 assert_eq!(h.quantile(1.0), Some(10.0));
 
-// or estimated counts of values less than or equal to the given value
+// or estimate counts of values less than or equal to the given value
 assert_eq!(h.count_less_than_or_equal_to(-7.4), 0);
 assert_eq!(h.count_less_than_or_equal_to(5.0), 5);
 assert_eq!(h.count_less_than_or_equal_to(13.0), 10);

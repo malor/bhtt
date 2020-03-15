@@ -35,7 +35,7 @@ use super::bin::Bin;
 /// Examples:
 ///
 /// ```
-/// use bhtt::histogram::Histogram;
+/// use bhtt::Histogram;
 ///
 /// let values = vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2];
 ///
@@ -57,10 +57,16 @@ use super::bin::Bin;
 /// assert_eq!(h.quantile(0.5), Some(4.75));
 /// assert_eq!(h.quantile(1.0), Some(10.0));
 ///
-/// // or estimated counts of values less than or equal to the given value
+/// // or estimate counts of values less than or equal to the given value
 /// assert_eq!(h.count_less_than_or_equal_to(-7.4), 0);
 /// assert_eq!(h.count_less_than_or_equal_to(5.0), 5);
 /// assert_eq!(h.count_less_than_or_equal_to(13.0), 10);
+///
+/// // it's possible to merge histograms that were built separately
+/// h.merge(&Histogram::from_iter(5, &[1.0, -7.6, 0.0, 5.8, 4.3, 2.1, 11.6]));
+/// assert_eq!(h.count(), 17);
+/// assert_eq!(h.min(), Some(-7.6));
+/// assert_eq!(h.max(), Some(11.6));
 /// ```
 #[derive(Debug)]
 pub struct Histogram {

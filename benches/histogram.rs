@@ -1,6 +1,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 
-use bhtt::histogram::Histogram;
+use bhtt::Histogram;
 
 const HISTOGRAM_SIZES: [usize; 6] = [8, 16, 32, 64, 128, 256];
 
