@@ -1,3 +1,7 @@
+#[cfg(test)]
+#[macro_use]
+extern crate approx;
+
 mod bin;
 mod histogram;
 

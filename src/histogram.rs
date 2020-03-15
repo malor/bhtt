@@ -171,24 +171,31 @@ impl Histogram {
             match total_count {
                 0 => None,
                 _ => {
+                    // Algorithm 4: Uniform procedure (from the paper mentioned in the description)
+                    //
+                    // To estimate the value of a given quantile we first find a pair of bins in
+                    // the histogram that enclose the target cumulative count. Then we use the
+                    // difference between the target count and the cumulative count up to the left
+                    // bin in the pair to form a (quadratic) equation, that allows us to calculate
+                    // the target value based on its proximity to the right bin.
+
                     let qth_count = self.count() as f64 * q;
                     let (i, up_to_qth_count) = self.index_of_cumulative_count_less_than(qth_count);
+
                     let (left_bin, right_bin) = self.get_bordering_bins(i);
+                    let (left_value, left_count) = (left_bin.value(), left_bin.count() as f64);
+                    let (right_value, right_count) = (right_bin.value(), right_bin.count() as f64);
 
                     let d = qth_count - up_to_qth_count;
-                    let a = right_bin.count() as f64 - left_bin.count() as f64;
+                    let a = right_count - left_count;
                     if a == 0.0 {
-                        Some(
-                            left_bin.value()
-                                + (right_bin.value() - left_bin.value())
-                                    * (d / left_bin.count() as f64),
-                        )
+                        Some(left_value + (right_value - left_value) * d / left_count)
                     } else {
-                        let b = 2.0 * left_bin.count() as f64;
+                        let b = 2.0 * left_count;
                         let c = -2.0 * d;
                         let z = (-b + (b.powi(2) - 4.0 * a * c).sqrt()) / (2.0 * a);
 
-                        Some(left_bin.value() + (right_bin.value() - left_bin.value()) * z)
+                        Some(left_value + (right_value - left_value) * z)
                     }
                 }
             }
@@ -229,10 +236,8 @@ impl Histogram {
 
             // determine the bordering bins
             let (left_bin, right_bin) = self.get_bordering_bins(pos);
-            let left_value = left_bin.value();
-            let left_count = left_bin.count() as f64;
-            let right_value = right_bin.value();
-            let right_count = right_bin.count() as f64;
+            let (left_value, left_count) = (left_bin.value(), left_bin.count() as f64);
+            let (right_value, right_count) = (right_bin.value(), right_bin.count() as f64);
 
             // estimate the count of values between the left neighbour and the (value, count) bins
             let count_left_to_value = if right_value - left_value <= 0.0 {
@@ -621,6 +626,67 @@ mod tests {
         assert_eq!(h.index_of_cumulative_count_less_than(22.0), (3, 21.5));
         assert_eq!(h.index_of_cumulative_count_less_than(60.0), (5, 50.0));
         assert_eq!(h.index_of_cumulative_count_less_than(70.0), (5, 50.0));
+    }
+
+    #[test]
+    fn quantile_empty() {
+        let h = Histogram::new(5);
+
+        assert_eq!(h.quantile(0.0), None);
+        assert_eq!(h.quantile(0.5), None);
+        assert_eq!(h.quantile(1.0), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "q must be in the range [0.0; 1.0]")]
+    fn quantile_nan() {
+        let h = Histogram::new(5);
+        h.quantile(std::f64::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "q must be in the range [0.0; 1.0]")]
+    fn quantile_not_in_range_high() {
+        let h = Histogram::new(5);
+        h.quantile(1.1);
+    }
+
+    #[test]
+    #[should_panic(expected = "q must be in the range [0.0; 1.0]")]
+    fn quantile_not_in_range_low() {
+        let h = Histogram::new(5);
+        h.quantile(-0.1);
+    }
+
+    #[test]
+    fn quantile() {
+        let bins = vec![
+            Bin::new(2.0, 1),
+            Bin::new(9.5, 2),
+            Bin::new(19.33, 3),
+            Bin::new(32.67, 3),
+            Bin::new(45.0, 1),
+        ];
+        let h = Histogram::from_parts(5, bins, Some(2.0), Some(45.0));
+
+        let expected = vec![
+            // quantile, expected value, max relative difference
+            (0.0, 2.0, 0.0),
+            (0.1, 8.3, 0.4),
+            (0.25, 11.5, 0.1),
+            (0.5, 21.0, 0.1),
+            (0.75, 31.5, 0.1),
+            (0.9, 36.9, 0.1),
+            (0.99, 44.19, 0.1),
+            (1.0, 45.0, 0.0),
+        ];
+        for (q, expected_value, max_relative) in expected {
+            assert_relative_eq!(
+                h.quantile(q).unwrap(),
+                expected_value,
+                max_relative = max_relative
+            );
+        }
     }
 
     #[test]
