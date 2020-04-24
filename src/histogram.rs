@@ -117,15 +117,11 @@ impl Histogram {
         h
     }
 
-    /// Create a new Histogram of the given size from an iterator.
-    pub fn from_iter<T>(size: usize, iter: T) -> Histogram
-    where
-        T: IntoIterator,
-        T::Item: Borrow<f64>,
-    {
+    /// Create a new Histogram of the given size from an iterable.
+    pub fn from_iter(size: usize, iter: impl IntoIterator<Item = impl Borrow<f64>>) -> Histogram {
         let mut h = Histogram::new(size);
 
-        for v in iter.into_iter() {
+        for v in iter {
             h.insert(*v.borrow());
         }
 
@@ -549,6 +545,26 @@ mod tests {
         assert_eq!(h.size(), 5);
         assert_eq!(h.min(), Some(-6.6));
         assert_eq!(h.max(), Some(10.0));
+        assert_eq!(h.bins(), expected_bins.as_slice());
+    }
+
+    #[test]
+    fn from_iter_values() {
+        let values = (1..=100).map(|v| v as f64);
+        let expected_bins = vec![
+            Bin::new(10.0, 19),
+            Bin::new(28.0, 17),
+            Bin::new(44.5, 16),
+            Bin::new(61.5, 18),
+            Bin::new(85.5, 30),
+        ];
+
+        let h = Histogram::from_iter(5, values);
+
+        assert_eq!(h.count(), 100);
+        assert_eq!(h.size(), 5);
+        assert_eq!(h.min(), Some(1.0));
+        assert_eq!(h.max(), Some(100.0));
         assert_eq!(h.bins(), expected_bins.as_slice());
     }
 
