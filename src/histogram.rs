@@ -138,7 +138,7 @@ impl Histogram {
     }
 
     /// Returns the bins of the histogram.
-    pub fn bins(&self) -> &Vec<Bin> {
+    pub fn bins(&self) -> &[Bin] {
         &self.bins
     }
 
@@ -366,7 +366,7 @@ mod tests {
         assert_eq!(h.count(), 0);
         assert_eq!(h.min(), None);
         assert_eq!(h.max(), None);
-        assert_eq!(h.bins(), &vec![]);
+        assert_eq!(h.bins(), &[]);
     }
 
     #[test]
@@ -387,7 +387,7 @@ mod tests {
         assert_eq!(h.count(), 14);
         assert_eq!(h.min(), min_value);
         assert_eq!(h.max(), max_value);
-        assert_eq!(h.bins(), &bins);
+        assert_eq!(h.bins(), bins.as_slice());
     }
 
     #[test]
@@ -421,7 +421,7 @@ mod tests {
         assert_eq!(h.size(), 5);
         assert_eq!(h.min(), Some(-6.6));
         assert_eq!(h.max(), Some(10.0));
-        assert_eq!(h.bins(), &expected_bins);
+        assert_eq!(h.bins(), expected_bins.as_slice());
     }
 
     #[test]
@@ -464,7 +464,7 @@ mod tests {
         assert_eq!(h.size(), 5);
         assert_eq!(h.min(), Some(-10.0));
         assert_eq!(h.max(), Some(42.0));
-        assert_eq!(h.bins(), &expected_bins);
+        assert_eq!(h.bins(), expected_bins.as_slice());
     }
 
     #[test]
@@ -513,7 +513,7 @@ mod tests {
         assert_eq!(h1.size(), 5);
         assert_eq!(h1.min(), Some(-6.6));
         assert_eq!(h1.max(), Some(7829.851));
-        assert_eq!(h1.bins(), &expected_bins);
+        assert_eq!(h1.bins(), expected_bins.as_slice());
     }
 
     #[test]
@@ -549,7 +549,7 @@ mod tests {
         assert_eq!(h.size(), 5);
         assert_eq!(h.min(), Some(-6.6));
         assert_eq!(h.max(), Some(10.0));
-        assert_eq!(h.bins(), &expected_bins);
+        assert_eq!(h.bins(), expected_bins.as_slice());
     }
 
     #[test]
