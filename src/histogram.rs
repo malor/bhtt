@@ -251,16 +251,24 @@ impl Histogram {
     }
 
     /// Update the histogram by inserting a new value.
-    pub fn insert(&mut self, value: f64) {
-        self.insert_bin(&Bin::new(value, 1));
-    }
-
-    /// Update the histogram by inserting a new bin.
-    pub fn insert_bin(&mut self, bin: &Bin) {
+    ///
+    /// ```
+    /// use bhtt::{Bin, Histogram};
+    ///
+    /// let mut h = Histogram::new(5);
+    ///
+    /// // inserting a floating-point value creates a new Bin of size 1
+    /// h.insert(42.0);
+    ///
+    /// // alternatively, a new Bin with the explicitly specified count can be inserted directly
+    /// h.insert(Bin::new(-7.5, 10));
+    /// ```
+    pub fn insert<T: Into<Bin>>(&mut self, value: T) {
         // insert the new bin preserving the ascending order. If the total number of bins exceeds
         // the configured size, the histogram is shrinked by merging two closest bins to restore
         // the invariant
-        self.bins.insert(self.bins.upper_bound(bin), *bin);
+        let bin = value.into();
+        self.bins.insert(self.bins.upper_bound(&bin), bin);
         self.shrink();
         self.track_min_max(bin.value());
     }
@@ -268,7 +276,7 @@ impl Histogram {
     /// Merge the histogram with another one (in-place).
     pub fn merge(&mut self, other: &Histogram) {
         for bin in other.bins() {
-            self.insert_bin(bin);
+            self.insert(*bin);
         }
 
         if let Some(min_value) = other.min() {
@@ -452,8 +460,8 @@ mod tests {
         ];
 
         let mut h = Histogram::new(5);
-        for bin in &bins {
-            h.insert_bin(bin);
+        for bin in bins {
+            h.insert(bin);
         }
 
         assert_eq!(h.count(), 48);
@@ -466,7 +474,7 @@ mod tests {
     #[test]
     fn insert_single_bin() {
         let mut h = Histogram::new(5);
-        h.insert_bin(&Bin::new(42.0, 84));
+        h.insert(Bin::new(42.0, 84));
 
         assert_eq!(h.count(), 84);
         assert_eq!(h.size(), 5);

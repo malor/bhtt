@@ -76,6 +76,17 @@ impl Bin {
     }
 }
 
+impl From<f32> for Bin {
+    fn from(value: f32) -> Self {
+        Bin::new(value as f64, 1)
+    }
+}
+impl From<f64> for Bin {
+    fn from(value: f64) -> Self {
+        Bin::new(value, 1)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -167,5 +178,28 @@ mod tests {
         let right = Bin::new(84.0, 0);
 
         Bin::merge(&left, &right);
+    }
+
+    #[test]
+    fn from() {
+        let b1 = Bin::from(42.0f32);
+        assert_eq!(b1.value(), 42.0);
+        assert_eq!(b1.count(), 1);
+
+        let b2 = Bin::from(-7.5f32);
+        assert_eq!(b2.value(), -7.5);
+        assert_eq!(b2.count(), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "value must not be NaN")]
+    fn from_nan() {
+        Bin::from(std::f64::NAN);
+    }
+
+    #[test]
+    #[should_panic(expected = "value must be finite")]
+    fn from_infinite() {
+        Bin::from(std::f64::INFINITY);
     }
 }
