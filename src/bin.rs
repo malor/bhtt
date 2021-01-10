@@ -1,23 +1,23 @@
 use ordered_float::NotNan;
 
-/// Histogram bin stored as a (value, count) pair.
+/// A histogram bin stored as a (value, count) pair.
 ///
 /// ```
 /// use bhtt::Bin;
 ///
-/// // Create a Bin with the value of 42.0 and the count of 84
+/// // create a new Bin with the value of 42.0 and the count of 84
 /// let b1 = Bin::new(42.0, 84);
 /// assert_eq!(b1.value(), 42.0);
 /// assert_eq!(b1.count(), 84);
 ///
-/// // Bins can be merged together. The value of the new Bin
-/// // will be equal to the weighted average of the two being merged
+/// // bins can be merged together. The value of a new Bin will be
+/// // equal to the weighted average of the two
 /// let b2 = Bin::new(84.0, 42);
 /// let b3 = Bin::merge(&b1, &b2);
 /// assert_eq!(b3.value(), 56.0);
 /// assert_eq!(b3.count(), 126);
 ///
-/// // Bins have natural ordering: values are compared first,
+/// // bins have natural ordering: values are compared first,
 /// // and counts are used to resolve the ties. Two bins are
 /// // equal when both their values and their counts are equal
 /// let reference = Bin::new(42.0, 84);
@@ -44,6 +44,14 @@ impl Bin {
     ///
     /// * `value` - Bin value. Must be a finite non-NaN value; otherwise a panic will be triggered.
     /// * `count` - Bin count. Must be greater than or equal to zero; otherwise a panic will be triggered.
+    ///
+    /// ```
+    /// use bhtt::Bin;
+    ///
+    /// let b = Bin::new(42.0, 84);
+    /// assert_eq!(b.value(), 42.0);
+    /// assert_eq!(b.count(), 84);
+    /// ```
     pub fn new(value: f64, count: u64) -> Bin {
         assert!(!value.is_nan(), "value must not be NaN");
         assert!(value.is_finite(), "value must be finite");
@@ -55,6 +63,17 @@ impl Bin {
     }
 
     /// Returns a new Bin that is an approximation of two bins merged together.
+    ///
+    /// ```
+    /// use bhtt::Bin;
+    ///
+    /// let b1 = Bin::new(42.0, 84);
+    /// let b2 = Bin::new(84.0, 42);
+    ///
+    /// let b3 = Bin::merge(&b1, &b2);
+    /// assert_eq!(b3.value(), 56.0);
+    /// assert_eq!(b3.count(), 126);
+    /// ```
     pub fn merge(left: &Bin, right: &Bin) -> Bin {
         let count = left.count() + right.count();
         assert!(count > 0, "count must be greater than zero");
@@ -66,11 +85,25 @@ impl Bin {
     }
 
     /// Returns the value of the bin
+    ///
+    /// ```
+    /// use bhtt::Bin;
+    ///
+    /// let b = Bin::new(42.0, 84);
+    /// assert_eq!(b.value(), 42.0);
+    /// ```
     pub fn value(&self) -> f64 {
         self.value.into_inner()
     }
 
     /// Returns the count of the bin
+    ///
+    /// ```
+    /// use bhtt::Bin;
+    ///
+    /// let b = Bin::new(42.0, 84);
+    /// assert_eq!(b.count(), 84);
+    /// ```
     pub fn count(&self) -> u64 {
         self.count
     }

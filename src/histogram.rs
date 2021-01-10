@@ -5,69 +5,9 @@ use superslice::*;
 
 use super::bin::Bin;
 
-/// The Ben-Haim/Tom-Tov (BHTT) streaming histogram sketch implementation
-/// (http://www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf).
-///
-/// A BHTT histogram is an ordered list of bins, that is a compact approximate
-/// representation of numerical data distribution.
-///
-/// The desired size of the list is chosen at histogram creation time.
-/// A bin is a (value, count) pair, where values are weighted averages
-/// of numbers inserted to the histogram, and counts show how many numbers
-/// have been merged together to produce a bin.
-///
-/// To insert a new value to the histogram, a new (value, 1) bin is added first,
-/// preserving the ascending order of bins in the list. If the total number of
-/// bins now exceeds the configured size value, then two closest bins are merged
-/// together to restore the invariant.
-///
-/// Unlike traditional histograms, which require one to specify both the
-/// histogram size and the bin boundaries configuration at creation time,
-/// BHTT streaming histograms automatically adjust the bins as new values
-/// are inserted.
-///
-/// Typical operations on the constructed histograms include approximations
-/// of quantiles and counts.
-///
-/// BHTT histograms are mergeable, but it's *not* possible to subtract one
-/// histogram from another bin by bin to get a difference between two.
-///
-/// Examples:
-///
-/// ```
-/// use bhtt::Histogram;
-///
-/// let values = vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2];
-///
-/// // create a new Histogram and insert some values
-/// let mut h = Histogram::new(5);
-/// for value in values {
-///     h.insert(value);
-/// }
-///
-/// // histogram keeps track of the total count of inserted values,
-/// // as well as the minimum/maximum inserted value
-/// assert_eq!(h.size(), 5);
-/// assert_eq!(h.count(), 10);
-/// assert_eq!(h.min(), Some(-5.4));
-/// assert_eq!(h.max(), Some(10.0));
-///
-/// // histogram allows to get approximations of arbitrary quantiles
-/// assert_eq!(h.quantile(0.0), Some(-5.4));
-/// assert_eq!(h.quantile(0.5), Some(4.75));
-/// assert_eq!(h.quantile(1.0), Some(10.0));
-///
-/// // or estimate counts of values less than or equal to the given value
-/// assert_eq!(h.count_less_than_or_equal_to(-7.4), 0);
-/// assert_eq!(h.count_less_than_or_equal_to(5.0), 5);
-/// assert_eq!(h.count_less_than_or_equal_to(13.0), 10);
-///
-/// // it's possible to merge histograms that were built separately
-/// h.merge(&Histogram::from_iter(5, &[1.0, -7.6, 0.0, 5.8, 4.3, 2.1, 11.6]));
-/// assert_eq!(h.count(), 17);
-/// assert_eq!(h.min(), Some(-7.6));
-/// assert_eq!(h.max(), Some(11.6));
-/// ```
+/// A fixed-size ordered list of bins which is a compact approximate representation
+/// of a numerical data distribution. Typical operations on the constructed histograms
+/// include approximations of quantiles and counts.
 #[derive(Debug)]
 pub struct Histogram {
     size: usize,
@@ -80,8 +20,15 @@ impl Histogram {
     /// Create a new Histogram with the given number of bins.
     ///
     /// The larger the size of the histogram, the more accurate approximations
-    /// of quantiles one can get from it. But updates will also be slower and
-    /// the histogram will consume more byte space.
+    /// of quantiles one can get from it, but updates will also be slower and
+    /// the histogram will consume more space.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let h = Histogram::new(5);
+    /// assert_eq!(h.size(), 5);
+    /// ```
     pub fn new(size: usize) -> Histogram {
         assert!(size > 0, "histogram size must be greater than 0");
 
@@ -97,6 +44,22 @@ impl Histogram {
     }
 
     /// Create a new Histogram from components of another histogram.
+    ///
+    /// ```
+    /// use bhtt::{Bin, Histogram};
+    ///
+    /// let size = 5;
+    /// let min_value = Some(-0.5);
+    /// let max_value = Some(85.0);
+    /// let bins = vec![Bin::new(0.0, 4), Bin::new(42.0, 8), Bin::new(84.0, 2)];
+    ///
+    /// let h = Histogram::from_parts(size, bins.clone(), min_value, max_value);
+    /// assert_eq!(h.size(), size);
+    /// assert_eq!(h.count(), 14);
+    /// assert_eq!(h.min(), min_value);
+    /// assert_eq!(h.max(), max_value);
+    /// assert_eq!(h.bins(), bins.as_slice());
+    /// ```
     pub fn from_parts(
         size: usize,
         bins: Vec<Bin>,
@@ -118,6 +81,16 @@ impl Histogram {
     }
 
     /// Create a new Histogram of the given size from an iterable.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let h = Histogram::from_iter(5, vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2]);
+    /// assert_eq!(h.size(), 5);
+    /// assert_eq!(h.count(), 10);
+    /// assert_eq!(h.min(), Some(-5.4));
+    /// assert_eq!(h.max(), Some(10.0));
+    /// ```
     pub fn from_iter(size: usize, iter: impl IntoIterator<Item = impl Borrow<f64>>) -> Histogram {
         let mut h = Histogram::new(size);
 
@@ -129,32 +102,96 @@ impl Histogram {
     }
 
     /// Returns the size of the histogram.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let h = Histogram::new(5);
+    /// assert_eq!(h.size(), 5);
+    /// ```
     pub fn size(&self) -> usize {
         self.size
     }
 
     /// Returns the bins of the histogram.
+    ///
+    /// ```
+    /// use bhtt::{Bin, Histogram};
+    ///
+    /// let h = Histogram::from_iter(5, &[42.0, -5.5, 0.0]);
+    /// assert_eq!(h.bins(), vec![
+    ///     Bin::new(-5.5, 1),
+    ///     Bin::new(0.0, 1),
+    ///     Bin::new(42.0, 1),
+    /// ]);
+    /// ```
     pub fn bins(&self) -> &[Bin] {
         &self.bins
     }
 
     /// Returns the total number of values inserted to the histogram.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h = Histogram::new(5);
+    /// for value in vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2] {
+    ///     h.insert(value);
+    /// }
+    ///
+    /// assert_eq!(h.count(), 10);
+    /// ```
     pub fn count(&self) -> u64 {
         self.bins.iter().map(|bin| bin.count()).sum()
     }
 
     /// Returns the minimum inserted value or None, if the histogram is empty.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h = Histogram::new(5);
+    /// for value in vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2] {
+    ///     h.insert(value);
+    /// }
+    ///
+    /// assert_eq!(h.min(), Some(-5.4));
+    /// ```
     pub fn min(&self) -> Option<f64> {
         self.min_value
     }
 
     /// Returns the maximum inserted value or None, if the histogram is empty.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h = Histogram::new(5);
+    /// for value in vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2] {
+    ///     h.insert(value);
+    /// }
+    ///
+    /// assert_eq!(h.max(), Some(10.0));
+    /// ```
     pub fn max(&self) -> Option<f64> {
         self.max_value
     }
 
     /// Returns an approximated value of the `q`'th quantile of the inserted values
     /// or None, if the histogram is empty. `q` must be in the range [0.0; 1.0].
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h = Histogram::new(5);
+    /// for value in vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2] {
+    ///     h.insert(value);
+    /// }
+    ///
+    /// assert_eq!(h.quantile(0.0), Some(-5.4));
+    /// assert_eq!(h.quantile(0.5), Some(4.75));
+    /// assert_eq!(h.quantile(1.0), Some(10.0));
+    /// ```
     pub fn quantile(&self, q: f64) -> Option<f64> {
         assert!(q >= 0.0 && q <= 1.0, "q must be in the range [0.0; 1.0]");
 
@@ -198,8 +235,20 @@ impl Histogram {
         }
     }
 
-    /// Returns an estimate of the number of values in the histogram that are less than or equal to
-    /// `value`.
+    /// Returns an estimate of the number of values in the histogram that are less
+    /// than or equal to `value`.
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h = Histogram::new(5);
+    /// for value in vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2] {
+    ///     h.insert(value);
+    /// }
+    /// assert_eq!(h.count_less_than_or_equal_to(-7.4), 0);
+    /// assert_eq!(h.count_less_than_or_equal_to(5.0), 5);
+    /// assert_eq!(h.count_less_than_or_equal_to(13.0), 10);
+    /// ```
     pub fn count_less_than_or_equal_to(&self, value: f64) -> u64 {
         assert!(!value.is_nan(), "value must not be NaN");
 
@@ -257,11 +306,13 @@ impl Histogram {
     ///
     /// let mut h = Histogram::new(5);
     ///
-    /// // inserting a floating-point value creates a new Bin of size 1
+    /// // insert a new Bin with a count of 1
     /// h.insert(42.0);
-    ///
-    /// // alternatively, a new Bin with the explicitly specified count can be inserted directly
+    /// // insert a new Bin with an explicitly specified count of values
     /// h.insert(Bin::new(-7.5, 10));
+    ///
+    /// assert_eq!(h.size(), 5);
+    /// assert_eq!(h.count(), 11);
     /// ```
     pub fn insert<T: Into<Bin>>(&mut self, value: T) {
         // insert the new bin preserving the ascending order. If the total number of bins exceeds
@@ -274,6 +325,24 @@ impl Histogram {
     }
 
     /// Merge the histogram with another one (in-place).
+    ///
+    /// ```
+    /// use bhtt::Histogram;
+    ///
+    /// let mut h1 = Histogram::from_iter(5, vec![1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2]);
+    /// assert_eq!(h1.size(), 5);
+    /// assert_eq!(h1.count(), 10);
+    /// assert_eq!(h1.min(), Some(-5.4));
+    /// assert_eq!(h1.max(), Some(10.0));
+    ///
+    /// let h2 = Histogram::from_iter(5, &[1.0, -7.6, 0.0, 5.8, 4.3, 2.1, 11.6]);
+    /// h1.merge(&h2);
+    ///
+    /// assert_eq!(h1.size(), 5);
+    /// assert_eq!(h1.count(), 17);
+    /// assert_eq!(h1.min(), Some(-7.6));
+    /// assert_eq!(h1.max(), Some(11.6));
+    /// ```
     pub fn merge(&mut self, other: &Histogram) {
         for bin in other.bins() {
             self.insert(*bin);
