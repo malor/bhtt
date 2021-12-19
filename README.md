@@ -1,5 +1,7 @@
 # bhtt
 
+![build status](https://github.com/malor/bhtt/actions/workflows/tests.yaml/badge.svg)
+
 The Ben-Haim/Tom-Tov (BHTT) streaming histogram sketch implementation
 (<http://www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf>).
 
