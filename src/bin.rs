@@ -1,6 +1,8 @@
 use ordered_float::NotNan;
 
-/// A histogram bin stored as a (value, count) pair.
+/// A histogram bin stored as a `(value, count)` pair.
+///
+/// *value* is a weighted average of *count* values (or bins) merged together.
 ///
 /// ```
 /// use bhtt::Bin;
@@ -38,7 +40,7 @@ pub struct Bin {
 }
 
 impl Bin {
-    /// Returns a new Bin with the given value and count
+    /// Returns a new Bin with the given value and count.
     ///
     /// # Arguments
     ///
@@ -58,7 +60,7 @@ impl Bin {
 
         Bin {
             value: NotNan::new(value).unwrap(),
-            count: count,
+            count,
         }
     }
 
@@ -84,7 +86,7 @@ impl Bin {
         Bin::new(value, count)
     }
 
-    /// Returns the value of the bin
+    /// Returns the value of the bin.
     ///
     /// ```
     /// use bhtt::Bin;
@@ -96,7 +98,7 @@ impl Bin {
         self.value.into_inner()
     }
 
-    /// Returns the count of the bin
+    /// Returns the count of the bin.
     ///
     /// ```
     /// use bhtt::Bin;
@@ -227,12 +229,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "value must not be NaN")]
     fn from_nan() {
-        Bin::from(std::f64::NAN);
+        let _ = Bin::from(std::f64::NAN);
     }
 
     #[test]
     #[should_panic(expected = "value must be finite")]
     fn from_infinite() {
-        Bin::from(std::f64::INFINITY);
+        let _ = Bin::from(std::f64::INFINITY);
     }
 }
