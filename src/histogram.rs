@@ -5,7 +5,7 @@ use superslice::*;
 
 use super::bin::Bin;
 
-/// A fixed-size ordered list of bins which is a compact approximate representation
+/// A fixed-size ordered list of bins that is a compact approximate representation
 /// of a numerical data distribution. Typical operations on the constructed histograms
 /// include approximations of quantiles and counts.
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl Histogram {
     ///
     /// The larger the size of the histogram, the more accurate approximations
     /// of quantiles one can get from it, but updates will also be slower and
-    /// the histogram will consume more space.
+    /// the histogram will consume more memory.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -33,7 +33,7 @@ impl Histogram {
         assert!(size > 0, "histogram size must be greater than 0");
 
         Histogram {
-            size: size,
+            size,
             // reserve one extra slot for bins, which are temporarily added during
             // histogram updates. This will allow us to avoid unnecessary memory
             // allocations
@@ -43,7 +43,7 @@ impl Histogram {
         }
     }
 
-    /// Create a new Histogram from components of another histogram.
+    /// Create a new Histogram from the components of another histogram.
     ///
     /// ```
     /// use bhtt::{Bin, Histogram};
@@ -69,10 +69,10 @@ impl Histogram {
         assert!(size > 0, "histogram size must be greater than 0");
 
         let mut h = Histogram {
-            size: size,
-            bins: bins,
-            min_value: min_value,
-            max_value: max_value,
+            size,
+            bins,
+            min_value,
+            max_value,
         };
         h.shrink();
         h.bins.shrink_to_fit();
@@ -145,7 +145,7 @@ impl Histogram {
         self.bins.iter().map(|bin| bin.count()).sum()
     }
 
-    /// Returns the minimum inserted value or None, if the histogram is empty.
+    /// Returns the (exact) minimum inserted value or None, if the histogram is empty.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -161,7 +161,7 @@ impl Histogram {
         self.min_value
     }
 
-    /// Returns the maximum inserted value or None, if the histogram is empty.
+    /// Returns the (exact) maximum inserted value or None, if the histogram is empty.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -178,7 +178,8 @@ impl Histogram {
     }
 
     /// Returns an approximated value of the `q`'th quantile of the inserted values
-    /// or None, if the histogram is empty. `q` must be in the range [0.0; 1.0].
+    /// or None, if the histogram is empty. `q` must be in the range [0.0; 1.0], or
+    /// the function will panic.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -193,7 +194,10 @@ impl Histogram {
     /// assert_eq!(h.quantile(1.0), Some(10.0));
     /// ```
     pub fn quantile(&self, q: f64) -> Option<f64> {
-        assert!(q >= 0.0 && q <= 1.0, "q must be in the range [0.0; 1.0]");
+        assert!(
+            (0.0..=1.0).contains(&q),
+            "q must be in the range [0.0; 1.0]"
+        );
 
         if q == 0.0 {
             self.min()
@@ -276,7 +280,7 @@ impl Histogram {
             let pos = self.bins.upper_bound(&Bin::new(value, 0));
 
             // calculate the sum of counts of the bins preceeding the left neighbour of that bin
-            let left = pos.checked_sub(1).unwrap_or(0);
+            let left = pos.saturating_sub(1);
             let count_up_to_left: u64 = self.bins[..left].iter().map(|bin| bin.count()).sum();
 
             // determine the bordering bins
