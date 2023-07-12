@@ -2,7 +2,7 @@
 name = "bhtt"
 version = "0.1.0"
 authors = ["Roman Podoliaka <roman.podoliaka@gmail.com>"]
-edition = "2018"
+edition = "2021"
 readme = "README.md"
 license = "MIT"
 
