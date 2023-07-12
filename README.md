@@ -2,7 +2,7 @@
 
 ![build status](https://github.com/malor/bhtt/actions/workflows/tests.yaml/badge.svg)
 
-The Ben-Haim/Tom-Tov (BHTT) streaming histogram sketch implementation
+Ben-Haim/Tom-Tov (BHTT) streaming histogram sketch implementation
 (<http://www.jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf>).
 
 A BHTT histogram is an ordered list of bins that is a compact
@@ -76,15 +76,11 @@ Integration tests are in `tests/` directory with input data and
 utility functions stored in `utilities/` (so that they can be shared
 between integration tests and benchmarks).
 
-Run the full test suite:
-
 ```shell
 $ cargo test
 ```
 
 ### Running benchmarks
-
-Run all benchmarks:
 
 ```shell
 $ cargo bench
