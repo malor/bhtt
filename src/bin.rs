@@ -45,7 +45,7 @@ impl Bin {
     /// # Arguments
     ///
     /// * `value` - Bin value. Must be a finite non-NaN value; otherwise a panic will be triggered.
-    /// * `count` - Bin count. Must be greater than or equal to zero; otherwise a panic will be triggered.
+    /// * `count` - Bin count. Must be greater than zero; otherwise a panic will be triggered.
     ///
     /// ```
     /// use bhtt::Bin;
@@ -57,10 +57,20 @@ impl Bin {
     pub fn new(value: f64, count: u64) -> Bin {
         assert!(!value.is_nan(), "value must not be NaN");
         assert!(value.is_finite(), "value must be finite");
+        assert!(count > 0, "count must be greater than zero");
 
         Bin {
             value: NotNan::new(value).unwrap(),
             count,
+        }
+    }
+
+    // Returns an empty Bin. This is only used internally in the algorithms for computing quantiles
+    // and counts which operate on virtual bins.
+    pub(crate) fn empty(value: f64) -> Bin {
+        Bin {
+            value: NotNan::new(value).unwrap(),
+            count: 0,
         }
     }
 
@@ -78,8 +88,6 @@ impl Bin {
     /// ```
     pub fn merge(left: &Bin, right: &Bin) -> Bin {
         let count = left.count() + right.count();
-        assert!(count > 0, "count must be greater than zero");
-
         let value = (left.value() * left.count() as f64 + right.value() * right.count() as f64)
             / count as f64;
 
@@ -128,13 +136,15 @@ mod tests {
 
     #[test]
     fn new() {
-        let b1 = Bin::new(42.0, 84);
-        assert_eq!(b1.value(), 42.0);
-        assert_eq!(b1.count(), 84);
+        let b = Bin::new(42.0, 84);
+        assert_eq!(b.value(), 42.0);
+        assert_eq!(b.count(), 84);
+    }
 
-        let b2 = Bin::new(-42.0, 0);
-        assert_eq!(b2.value(), -42.0);
-        assert_eq!(b2.count(), 0);
+    #[test]
+    #[should_panic(expected = "count must be greater than zero")]
+    fn new_invalid_count() {
+        Bin::new(42.0, 0);
     }
 
     #[test]

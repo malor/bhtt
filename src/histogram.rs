@@ -3,7 +3,7 @@ use std::borrow::Borrow;
 use ordered_float::OrderedFloat;
 use superslice::*;
 
-use super::bin::Bin;
+use crate::bin::Bin;
 
 /// A fixed-size ordered list of bins that is a compact approximate representation
 /// of a numerical data distribution. Typical operations on the constructed histograms
@@ -41,43 +41,6 @@ impl Histogram {
             min_value: None,
             max_value: None,
         }
-    }
-
-    /// Create a new Histogram from the components of another histogram.
-    ///
-    /// ```
-    /// use bhtt::{Bin, Histogram};
-    ///
-    /// let size = 5;
-    /// let min_value = Some(-0.5);
-    /// let max_value = Some(85.0);
-    /// let bins = vec![Bin::new(0.0, 4), Bin::new(42.0, 8), Bin::new(84.0, 2)];
-    ///
-    /// let h = Histogram::from_parts(size, bins.clone(), min_value, max_value);
-    /// assert_eq!(h.size(), size);
-    /// assert_eq!(h.count(), 14);
-    /// assert_eq!(h.min(), min_value);
-    /// assert_eq!(h.max(), max_value);
-    /// assert_eq!(h.bins(), bins.as_slice());
-    /// ```
-    pub fn from_parts(
-        size: usize,
-        bins: Vec<Bin>,
-        min_value: Option<f64>,
-        max_value: Option<f64>,
-    ) -> Histogram {
-        assert!(size > 0, "histogram size must be greater than 0");
-
-        let mut h = Histogram {
-            size,
-            bins,
-            min_value,
-            max_value,
-        };
-        h.shrink();
-        h.bins.shrink_to_fit();
-
-        h
     }
 
     /// Create a new Histogram of the given size from an iterable.
@@ -129,7 +92,7 @@ impl Histogram {
         &self.bins
     }
 
-    /// Returns the total number of values inserted to the histogram.
+    /// Returns the total number of values in the histogram.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -145,7 +108,7 @@ impl Histogram {
         self.bins.iter().map(|bin| bin.count()).sum()
     }
 
-    /// Returns the (exact) minimum inserted value or None, if the histogram is empty.
+    /// Returns the (exact) minimum value or `None` if the histogram is empty.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -161,7 +124,7 @@ impl Histogram {
         self.min_value
     }
 
-    /// Returns the (exact) maximum inserted value or None, if the histogram is empty.
+    /// Returns the (exact) maximum value or `None` if the histogram is empty.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -177,9 +140,9 @@ impl Histogram {
         self.max_value
     }
 
-    /// Returns an approximated value of the `q`'th quantile of the inserted values
-    /// or None, if the histogram is empty. `q` must be in the range [0.0; 1.0], or
-    /// the function will panic.
+    /// Returns an approximated value of the `q`'th quantile of the values or `None`
+    /// if the histogram is empty. `q` must be in the range [0.0; 1.0], or the function
+    /// will panic.
     ///
     /// ```
     /// use bhtt::Histogram;
@@ -277,7 +240,7 @@ impl Histogram {
             // 3) count of values between the left neighbour and the (value, count) bin
 
             // find the position of the bin if we were to insert it to the histogram
-            let pos = self.bins.upper_bound(&Bin::new(value, 0));
+            let pos = self.bins.upper_bound(&Bin::empty(value));
 
             // calculate the sum of counts of the bins preceeding the left neighbour of that bin
             let left = pos.saturating_sub(1);
@@ -360,8 +323,7 @@ impl Histogram {
         }
     }
 
-    /// Keep track of the minimum and the maximum inserted values
-    /// (this will allow us to have more accurate quantile approximations).
+    /// Keep track of the minimum and the maximum values (this will allow us to have more accurate quantile approximations).
     fn track_min_max(&mut self, value: f64) {
         self.min_value
             .replace(self.min_value.map_or(
@@ -403,7 +365,7 @@ impl Histogram {
     fn index_of_cumulative_count_less_than(&self, target_count: f64) -> (usize, f64) {
         self.bins
             .iter()
-            .zip(std::iter::once(&Bin::new(0.0, 0)).chain(&self.bins))
+            .zip(std::iter::once(&Bin::empty(0.0)).chain(&self.bins))
             .map(|(l, r)| (l.count() + r.count()) as f64 / 2.0)
             .scan(0.0, |partial_count, next_count| {
                 *partial_count += next_count;
@@ -418,13 +380,13 @@ impl Histogram {
     fn get_bordering_bins(&self, i: usize) -> (Bin, Bin) {
         if i == 0 {
             (
-                Bin::new(self.min_value.unwrap(), 0),
+                Bin::empty(self.min_value.unwrap()),
                 *self.bins.first().unwrap(),
             )
         } else if i == self.bins.len() {
             (
                 *self.bins.last().unwrap(),
-                Bin::new(self.max_value.unwrap(), 0),
+                Bin::empty(self.max_value.unwrap()),
             )
         } else {
             (self.bins[i - 1], self.bins[i])
@@ -435,6 +397,26 @@ impl Histogram {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn histogram_from_parts(
+        size: usize,
+        bins: Vec<Bin>,
+        min_value: Option<f64>,
+        max_value: Option<f64>,
+    ) -> Histogram {
+        assert!(size > 0, "histogram size must be greater than 0");
+
+        let mut h = Histogram {
+            size,
+            bins,
+            min_value,
+            max_value,
+        };
+        h.shrink();
+        h.bins.shrink_to_fit();
+
+        h
+    }
 
     #[test]
     fn new() {
@@ -450,30 +432,6 @@ mod tests {
     #[should_panic(expected = "histogram size must be greater than 0")]
     fn new_invalid_size() {
         Histogram::new(0);
-    }
-
-    #[test]
-    fn from_parts() {
-        let size = 5;
-        let min_value = Some(-0.5);
-        let max_value = Some(85.0);
-        let bins = vec![Bin::new(0.0, 4), Bin::new(42.0, 8), Bin::new(84.0, 2)];
-
-        let h = Histogram::from_parts(size, bins.clone(), min_value, max_value);
-        assert_eq!(h.size(), size);
-        assert_eq!(h.count(), 14);
-        assert_eq!(h.min(), min_value);
-        assert_eq!(h.max(), max_value);
-        assert_eq!(h.bins(), bins.as_slice());
-    }
-
-    #[test]
-    #[should_panic(expected = "histogram size must be greater than 0")]
-    fn from_parts_invalid_size() {
-        let size = 0;
-        let bins = vec![Bin::new(0.0, 4), Bin::new(42.0, 8), Bin::new(84.0, 2)];
-
-        Histogram::from_parts(size, bins.clone(), Some(0.0), Some(100.0));
     }
 
     #[test]
@@ -565,7 +523,7 @@ mod tests {
             Bin::new(4.041666666666667, 3),
             Bin::new(8.725, 4),
         ];
-        let mut h1 = Histogram::from_parts(5, bins1, Some(-6.6), Some(10.0));
+        let mut h1 = histogram_from_parts(5, bins1, Some(-6.6), Some(10.0));
 
         let bins2 = vec![
             Bin::new(33.32588794226721, 9977),
@@ -574,7 +532,7 @@ mod tests {
             Bin::new(5361.3435, 2),
             Bin::new(7349.9465, 2),
         ];
-        let h2 = Histogram::from_parts(5, bins2, Some(9.48), Some(7829.851));
+        let h2 = histogram_from_parts(5, bins2, Some(9.48), Some(7829.851));
 
         let expected_bins = vec![
             Bin::new(33.27875390312249, 9992),
@@ -659,7 +617,7 @@ mod tests {
             Bin::new(17.4, 1),
             Bin::new(20.1, 1),
         ];
-        let h = Histogram::from_parts(5, bins, Some(-10.0), Some(100.0));
+        let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
         assert_eq!(h.find_closest_bins(), (1, 2));
     }
@@ -675,7 +633,7 @@ mod tests {
             Bin::new(4.0, 4),
             Bin::new(5.0, 5),
         ];
-        let h = Histogram::from_parts(5, bins, Some(-10.0), Some(100.0));
+        let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
         assert_eq!(h.find_closest_bins(), (0, 1));
     }
@@ -691,7 +649,7 @@ mod tests {
             Bin::new(4.0, 1),
             Bin::new(5.0, 1),
         ];
-        let h = Histogram::from_parts(5, bins, Some(-10.0), Some(100.0));
+        let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
         assert_eq!(h.find_closest_bins(), (0, 1));
     }
@@ -705,7 +663,7 @@ mod tests {
             Bin::new(4.0, 15),
             Bin::new(5.0, 20),
         ];
-        let h = Histogram::from_parts(5, bins, Some(0.0), Some(6.0));
+        let h = histogram_from_parts(5, bins, Some(0.0), Some(6.0));
 
         // [0] [ 5 : 5 ] [ 4 : 4 ] [ 3.5 : 3.5 ] [ 7.5 : 7.5 ] [ 10 : 10 ] [0]
         //    0         1         2             3             4          5
@@ -764,7 +722,7 @@ mod tests {
             Bin::new(32.67, 3),
             Bin::new(45.0, 1),
         ];
-        let h = Histogram::from_parts(5, bins, Some(2.0), Some(45.0));
+        let h = histogram_from_parts(5, bins, Some(2.0), Some(45.0));
 
         let expected = vec![
             // quantile, expected value, max relative difference
@@ -813,7 +771,7 @@ mod tests {
             Bin::new(32.67, 3),
             Bin::new(45.0, 1),
         ];
-        let h = Histogram::from_parts(5, bins, Some(2.0), Some(45.0));
+        let h = histogram_from_parts(5, bins, Some(2.0), Some(45.0));
 
         assert_eq!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), 0);
         assert_eq!(h.count_less_than_or_equal_to(-42.0), 0);
