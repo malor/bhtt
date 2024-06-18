@@ -220,11 +220,11 @@ impl Histogram {
         assert!(!value.is_nan(), "value must not be NaN");
 
         let total_count = self.count();
-        if total_count == 0 || value < self.min().unwrap_or(std::f64::NAN) {
+        if total_count == 0 || value < self.min().unwrap_or(f64::NAN) {
             // histogram is empty, or the interval (-inf; value] does not intersect
             // with the interval [min; max]
             0
-        } else if value >= self.max().unwrap_or(std::f64::NAN) {
+        } else if value >= self.max().unwrap_or(f64::NAN) {
             // the interval (-inf; value] includes all the values in the histogram
             total_count
         } else {
