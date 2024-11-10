@@ -235,14 +235,14 @@ impl Histogram {
             // the (value, count) bin if we were to insert it to the histogram. The resulting count
             // will be equal to the sum of the following components:
             //
-            // 1) sum of counts of the bins preceeding the left neighbour
+            // 1) sum of counts of the bins preceding the left neighbour
             // 2) one half of left neighbour's count
             // 3) count of values between the left neighbour and the (value, count) bin
 
             // find the position of the bin if we were to insert it to the histogram
             let pos = self.bins.upper_bound(&Bin::empty(value));
 
-            // calculate the sum of counts of the bins preceeding the left neighbour of that bin
+            // calculate the sum of counts of the bins preceding the left neighbour of that bin
             let left = pos.saturating_sub(1);
             let count_up_to_left: u64 = self.bins[..left].iter().map(|bin| bin.count()).sum();
 
@@ -283,7 +283,7 @@ impl Histogram {
     /// ```
     pub fn insert<T: Into<Bin>>(&mut self, value: T) {
         // insert the new bin preserving the ascending order. If the total number of bins exceeds
-        // the configured size, the histogram is shrinked by merging two closest bins to restore
+        // the configured size, the histogram is shrunk by merging two closest bins to restore
         // the invariant
         let bin = value.into();
         self.bins.insert(self.bins.upper_bound(&bin), bin);
