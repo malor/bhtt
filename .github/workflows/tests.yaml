@@ -19,6 +19,13 @@ defaults:
     shell: bash
 
 jobs:
+  spellcheck:
+    name: Spell check with Typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: crate-ci/typos@v1.27.3
+
   cargo-fmt:
     runs-on: ubuntu-latest
     steps:
