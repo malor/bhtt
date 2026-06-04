@@ -239,8 +239,9 @@ impl Histogram {
             // 2) one half of left neighbour's count
             // 3) count of values between the left neighbour and the (value, count) bin
 
-            // find the position of the bin if we were to insert it to the histogram
-            let pos = self.bins.upper_bound(&Bin::empty(value));
+            // Find the position of the query value among bin values. This uses only
+            // bin values so exact matches are counted as part of the left side.
+            let pos = self.bins.partition_point(|bin| bin.value() <= value);
 
             // calculate the sum of counts of the bins preceding the left neighbour of that bin
             let left = pos.saturating_sub(1);
@@ -783,5 +784,26 @@ mod tests {
         assert_eq!(h.count_less_than_or_equal_to(38.0), 9);
         assert_eq!(h.count_less_than_or_equal_to(45.0), 10);
         assert_eq!(h.count_less_than_or_equal_to(std::f64::INFINITY), 10);
+    }
+
+    #[test]
+    fn count_less_than_or_equal_to_min() {
+        let h = Histogram::from_iter(3, &[1.0, 2.0, 3.0]);
+
+        assert_eq!(h.count_less_than_or_equal_to(1.0), 1);
+    }
+
+    #[test]
+    fn count_less_than_or_equal_to_duplicate_min() {
+        let h = Histogram::from_iter(5, &[1.0, 1.0, 2.0]);
+
+        assert_eq!(h.count_less_than_or_equal_to(1.0), 2);
+    }
+
+    #[test]
+    fn count_less_than_or_equal_to_duplicate_interior_value() {
+        let h = Histogram::from_iter(5, &[1.0, 2.0, 2.0, 3.0]);
+
+        assert_eq!(h.count_less_than_or_equal_to(2.0), 3);
     }
 }
