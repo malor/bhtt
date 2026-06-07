@@ -134,11 +134,13 @@ impl From<f64> for Bin {
 mod tests {
     use super::*;
 
-    #[test]
+    use googletest::prelude::*;
+
+    #[gtest]
     fn new() {
         let b = Bin::new(42.0, 84);
-        assert_eq!(b.value(), 42.0);
-        assert_eq!(b.count(), 84);
+        expect_that!(b.value(), eq(42.0));
+        expect_that!(b.count(), eq(84));
     }
 
     #[test]
@@ -165,45 +167,45 @@ mod tests {
         Bin::new(std::f64::NEG_INFINITY, 84);
     }
 
-    #[test]
+    #[gtest]
     fn ordering() {
         let reference = Bin::new(42.0, 84);
 
         let gt_by_value = Bin::new(42.1, 84);
-        assert!(gt_by_value > reference);
-        assert!(gt_by_value >= reference);
-        assert!(reference < gt_by_value);
-        assert!(reference <= gt_by_value);
+        expect_that!(gt_by_value, gt(reference));
+        expect_that!(gt_by_value, ge(reference));
+        expect_that!(reference, lt(gt_by_value));
+        expect_that!(reference, le(gt_by_value));
 
         let gt_by_count = Bin::new(42.0, 85);
-        assert!(gt_by_count > reference);
-        assert!(gt_by_count >= reference);
-        assert!(reference < gt_by_count);
-        assert!(reference <= gt_by_count);
+        expect_that!(gt_by_count, gt(reference));
+        expect_that!(gt_by_count, ge(reference));
+        expect_that!(reference, lt(gt_by_count));
+        expect_that!(reference, le(gt_by_count));
 
         let equal = Bin::new(42.0, 84);
-        assert!(!(reference < equal));
-        assert!(!(reference > equal));
-        assert!(reference >= equal);
-        assert!(reference <= equal);
+        expect_that!(reference, not(lt(equal)));
+        expect_that!(reference, not(gt(equal)));
+        expect_that!(reference, ge(equal));
+        expect_that!(reference, le(equal));
     }
 
-    #[test]
+    #[gtest]
     fn equality() {
         let reference = Bin::new(42.0, 84);
         let equal = Bin::new(42.0, 84);
         let not_equal_by_value = Bin::new(42.1, 84);
         let not_equal_by_count = Bin::new(42.0, 85);
 
-        assert_eq!(reference, equal);
-        assert_eq!(equal, reference);
-        assert_ne!(reference, not_equal_by_value);
-        assert_ne!(not_equal_by_value, reference);
-        assert_ne!(reference, not_equal_by_count);
-        assert_ne!(not_equal_by_count, reference);
+        expect_that!(reference, eq(equal));
+        expect_that!(equal, eq(reference));
+        expect_that!(reference, ne(not_equal_by_value));
+        expect_that!(not_equal_by_value, ne(reference));
+        expect_that!(reference, ne(not_equal_by_count));
+        expect_that!(not_equal_by_count, ne(reference));
     }
 
-    #[test]
+    #[gtest]
     fn merge() {
         let left = Bin::new(42.0, 84);
         let right = Bin::new(84.0, 42);
@@ -213,7 +215,7 @@ mod tests {
         );
 
         let actual = Bin::merge(&left, &right);
-        assert_eq!(actual, expected);
+        expect_that!(actual, eq(expected));
     }
 
     #[test]
@@ -225,15 +227,15 @@ mod tests {
         Bin::merge(&left, &right);
     }
 
-    #[test]
+    #[gtest]
     fn from() {
         let b1 = Bin::from(42.0f32);
-        assert_eq!(b1.value(), 42.0);
-        assert_eq!(b1.count(), 1);
+        expect_that!(b1.value(), eq(42.0));
+        expect_that!(b1.count(), eq(1));
 
         let b2 = Bin::from(-7.5f32);
-        assert_eq!(b2.value(), -7.5);
-        assert_eq!(b2.count(), 1);
+        expect_that!(b2.value(), eq(-7.5));
+        expect_that!(b2.count(), eq(1));
     }
 
     #[test]

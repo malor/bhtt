@@ -11,8 +11,8 @@ ordered-float = "1.0"
 superslice = "1"
 
 [dev-dependencies]
-approx = "0.3.2"
 criterion = "0.3.0"
+googletest = "0.14.3"
 test-case = "1.0.0"
 utilities = { path = "utilities" }
 
