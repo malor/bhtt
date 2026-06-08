@@ -1,9 +1,5 @@
 #![doc = include_str!("../README.md")]
 
-#[cfg(test)]
-#[macro_use]
-extern crate approx;
-
 mod bin;
 mod histogram;
 

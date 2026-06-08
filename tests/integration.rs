@@ -1,6 +1,4 @@
-#[macro_use]
-extern crate approx;
-
+use googletest::prelude::*;
 use test_case::test_case;
 
 use bhtt::Histogram;
@@ -10,15 +8,16 @@ use bhtt::Histogram;
 #[test_case("utilities/testdata/pings.txt", 64, 0.25)]
 #[test_case("utilities/testdata/pings.txt", 128, 0.035)]
 #[test_case("utilities/testdata/pings.txt", 256, 0.005)]
-fn quantile(filename: &str, histogram_size: usize, max_error_pct: f64) {
+fn quantile(filename: &str, histogram_size: usize, max_error_ratio: f64) {
     let dataset = utilities::Dataset::from_file(filename).unwrap();
 
     let h = Histogram::from_iter(histogram_size, dataset.values());
     for (q, expected_value) in dataset.quantiles() {
-        assert_relative_eq!(
-            h.quantile(**q).unwrap(),
-            expected_value,
-            max_relative = max_error_pct
-        );
+        let actual = h.quantile(**q).unwrap();
+        assert_that!(actual, not(is_nan()));
+        assert_that!(actual, is_finite());
+
+        let tolerance = max_error_ratio * expected_value.abs().max(actual.abs());
+        assert_that!(actual, near(*expected_value, tolerance));
     }
 }

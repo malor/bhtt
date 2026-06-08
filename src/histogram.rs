@@ -399,6 +399,9 @@ impl Histogram {
 mod tests {
     use super::*;
 
+    use googletest::prelude::*;
+    use test_case::test_case;
+
     fn histogram_from_parts(
         size: usize,
         bins: Vec<Bin>,
@@ -419,14 +422,14 @@ mod tests {
         h
     }
 
-    #[test]
+    #[gtest]
     fn new() {
         let h = Histogram::new(5);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.count(), 0);
-        assert_eq!(h.min(), None);
-        assert_eq!(h.max(), None);
-        assert_eq!(h.bins(), &[]);
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.count(), eq(0));
+        expect_that!(h.min(), none());
+        expect_that!(h.max(), none());
+        expect_that!(h.bins(), is_empty());
     }
 
     #[test]
@@ -435,17 +438,10 @@ mod tests {
         Histogram::new(0);
     }
 
-    #[test]
+    #[gtest]
     fn insert() {
         let values = vec![
             1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2, -6.0, -6.6, 0.5, 0.5, 2.625,
-        ];
-        let expected_bins = vec![
-            Bin::new(-6.0, 3),
-            Bin::new(-2.1, 1),
-            Bin::new(0.5, 4),
-            Bin::new(4.041666666666667, 3),
-            Bin::new(8.725, 4),
         ];
 
         let mut h = Histogram::new(5);
@@ -453,26 +449,35 @@ mod tests {
             h.insert(*v);
         }
 
-        assert_eq!(h.count(), values.len() as u64);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(-6.6));
-        assert_eq!(h.max(), Some(10.0));
-        assert_eq!(h.bins(), expected_bins.as_slice());
+        expect_that!(h.count(), eq(values.len() as u64));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(-6.6)));
+        expect_that!(h.max(), some(eq(10.0)));
+        expect_that!(
+            h.bins(),
+            elements_are![
+                &Bin::new(-6.0, 3),
+                &Bin::new(-2.1, 1),
+                &Bin::new(0.5, 4),
+                &Bin::new(4.041666666666667, 3),
+                &Bin::new(8.725, 4),
+            ]
+        );
     }
 
-    #[test]
+    #[gtest]
     fn insert_single_value() {
         let mut h = Histogram::new(5);
         h.insert(42.0);
 
-        assert_eq!(h.count(), 1);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(42.0));
-        assert_eq!(h.max(), Some(42.0));
-        assert_eq!(h.bins(), &[Bin::new(42.0, 1)]);
+        expect_that!(h.count(), eq(1));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(42.0)));
+        expect_that!(h.max(), some(eq(42.0)));
+        expect_that!(h.bins(), elements_are![&Bin::new(42.0, 1)]);
     }
 
-    #[test]
+    #[gtest]
     fn insert_bin() {
         let bins = vec![
             Bin::new(4.9, 6),
@@ -483,39 +488,40 @@ mod tests {
             Bin::new(17.4, 4),
             Bin::new(-10.0, 1),
         ];
-        let expected_bins = vec![
-            Bin::new(-10.0, 1),
-            Bin::new(4.609090909090909, 22),
-            Bin::new(17.4, 4),
-            Bin::new(20.1, 7),
-            Bin::new(42.0, 14),
-        ];
-
         let mut h = Histogram::new(5);
         for bin in bins {
             h.insert(bin);
         }
 
-        assert_eq!(h.count(), 48);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(-10.0));
-        assert_eq!(h.max(), Some(42.0));
-        assert_eq!(h.bins(), expected_bins.as_slice());
+        expect_that!(h.count(), eq(48));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(-10.0)));
+        expect_that!(h.max(), some(eq(42.0)));
+        expect_that!(
+            h.bins(),
+            elements_are![
+                &Bin::new(-10.0, 1),
+                &Bin::new(4.609090909090909, 22),
+                &Bin::new(17.4, 4),
+                &Bin::new(20.1, 7),
+                &Bin::new(42.0, 14),
+            ]
+        );
     }
 
-    #[test]
+    #[gtest]
     fn insert_single_bin() {
         let mut h = Histogram::new(5);
         h.insert(Bin::new(42.0, 84));
 
-        assert_eq!(h.count(), 84);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(42.0));
-        assert_eq!(h.max(), Some(42.0));
-        assert_eq!(h.bins(), &[Bin::new(42.0, 84)]);
+        expect_that!(h.count(), eq(84));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(42.0)));
+        expect_that!(h.max(), some(eq(42.0)));
+        expect_that!(h.bins(), elements_are![&Bin::new(42.0, 84)]);
     }
 
-    #[test]
+    #[gtest]
     fn merge() {
         let bins1 = vec![
             Bin::new(-6.0, 3),
@@ -535,80 +541,83 @@ mod tests {
         ];
         let h2 = histogram_from_parts(5, bins2, Some(9.48), Some(7829.851));
 
-        let expected_bins = vec![
-            Bin::new(33.27875390312249, 9992),
-            Bin::new(1255.8137647058825, 17),
-            Bin::new(3364.983, 2),
-            Bin::new(5361.3435, 2),
-            Bin::new(7349.9465, 2),
-        ];
-
         h1.merge(&h2);
 
-        assert_eq!(h1.count(), 10015);
-        assert_eq!(h1.size(), 5);
-        assert_eq!(h1.min(), Some(-6.6));
-        assert_eq!(h1.max(), Some(7829.851));
-        assert_eq!(h1.bins(), expected_bins.as_slice());
+        expect_that!(h1.count(), eq(10015));
+        expect_that!(h1.size(), eq(5));
+        expect_that!(h1.min(), some(eq(-6.6)));
+        expect_that!(h1.max(), some(eq(7829.851)));
+        expect_that!(
+            h1.bins(),
+            elements_are![
+                &Bin::new(33.27875390312249, 9992),
+                &Bin::new(1255.8137647058825, 17),
+                &Bin::new(3364.983, 2),
+                &Bin::new(5361.3435, 2),
+                &Bin::new(7349.9465, 2),
+            ]
+        );
     }
 
-    #[test]
+    #[gtest]
     fn merge_empty() {
         let mut h1 = Histogram::new(5);
         let h2 = Histogram::new(10);
 
         h1.merge(&h2);
 
-        assert_eq!(h1.count(), 0);
-        assert_eq!(h1.size(), 5);
-        assert_eq!(h1.min(), None);
-        assert_eq!(h1.max(), None);
-        assert_eq!(h1.bins(), &[]);
+        expect_that!(h1.count(), eq(0));
+        expect_that!(h1.size(), eq(5));
+        expect_that!(h1.min(), none());
+        expect_that!(h1.max(), none());
+        expect_that!(h1.bins(), is_empty());
     }
 
-    #[test]
+    #[gtest]
     fn from_iter() {
         let values = vec![
             1.0, 0.0, -5.4, -2.1, 8.5, 10.0, 8.6, 4.3, 7.8, 5.2, -6.0, -6.6, 0.5, 0.5, 2.625,
         ];
-        let expected_bins = vec![
-            Bin::new(-6.0, 3),
-            Bin::new(-2.1, 1),
-            Bin::new(0.5, 4),
-            Bin::new(4.041666666666667, 3),
-            Bin::new(8.725, 4),
-        ];
-
         let h = Histogram::from_iter(5, &values);
 
-        assert_eq!(h.count(), values.len() as u64);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(-6.6));
-        assert_eq!(h.max(), Some(10.0));
-        assert_eq!(h.bins(), expected_bins.as_slice());
+        expect_that!(h.count(), eq(values.len() as u64));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(-6.6)));
+        expect_that!(h.max(), some(eq(10.0)));
+        expect_that!(
+            h.bins(),
+            elements_are![
+                &Bin::new(-6.0, 3),
+                &Bin::new(-2.1, 1),
+                &Bin::new(0.5, 4),
+                &Bin::new(4.041666666666667, 3),
+                &Bin::new(8.725, 4),
+            ]
+        );
     }
 
-    #[test]
+    #[gtest]
     fn from_iter_values() {
         let values = (1..=100).map(|v| v as f64);
-        let expected_bins = vec![
-            Bin::new(10.0, 19),
-            Bin::new(28.0, 17),
-            Bin::new(44.5, 16),
-            Bin::new(61.5, 18),
-            Bin::new(85.5, 30),
-        ];
-
         let h = Histogram::from_iter(5, values);
 
-        assert_eq!(h.count(), 100);
-        assert_eq!(h.size(), 5);
-        assert_eq!(h.min(), Some(1.0));
-        assert_eq!(h.max(), Some(100.0));
-        assert_eq!(h.bins(), expected_bins.as_slice());
+        expect_that!(h.count(), eq(100));
+        expect_that!(h.size(), eq(5));
+        expect_that!(h.min(), some(eq(1.0)));
+        expect_that!(h.max(), some(eq(100.0)));
+        expect_that!(
+            h.bins(),
+            elements_are![
+                &Bin::new(10.0, 19),
+                &Bin::new(28.0, 17),
+                &Bin::new(44.5, 16),
+                &Bin::new(61.5, 18),
+                &Bin::new(85.5, 30),
+            ]
+        );
     }
 
-    #[test]
+    #[gtest]
     fn find_closest_bins_distance() {
         // proximity of bins is defined by the absolute distance between their values
         let bins = vec![
@@ -620,10 +629,10 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
-        assert_eq!(h.find_closest_bins(), (1, 2));
+        expect_that!(h.find_closest_bins(), eq((1, 2)));
     }
 
-    #[test]
+    #[gtest]
     fn find_closest_bins_count() {
         // distances between bin values are equal. Therefore, the pair of bins
         // with a smaller total count is considered to be the closest.
@@ -636,10 +645,10 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
-        assert_eq!(h.find_closest_bins(), (0, 1));
+        expect_that!(h.find_closest_bins(), eq((0, 1)));
     }
 
-    #[test]
+    #[gtest]
     fn find_closest_bins_index() {
         // distances between bin values are equal, and so are bin counts.
         // Therefore, the leftmost pair of bins is considered to be the closest.
@@ -652,10 +661,10 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(-10.0), Some(100.0));
 
-        assert_eq!(h.find_closest_bins(), (0, 1));
+        expect_that!(h.find_closest_bins(), eq((0, 1)));
     }
 
-    #[test]
+    #[gtest]
     fn index_of_cumulative_count_less_than() {
         let bins = vec![
             Bin::new(1.0, 10),
@@ -669,28 +678,28 @@ mod tests {
         // [0] [ 5 : 5 ] [ 4 : 4 ] [ 3.5 : 3.5 ] [ 7.5 : 7.5 ] [ 10 : 10 ] [0]
         //    0         1         2             3             4          5
 
-        assert_eq!(h.index_of_cumulative_count_less_than(-10.0), (0, 0.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(0.0), (0, 0.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(1.0), (0, 0.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(5.0), (0, 0.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(6.0), (1, 5.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(11.0), (1, 5.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(14.0), (1, 5.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(15.0), (2, 14.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(18.0), (2, 14.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(21.5), (2, 14.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(22.0), (3, 21.5));
-        assert_eq!(h.index_of_cumulative_count_less_than(60.0), (5, 50.0));
-        assert_eq!(h.index_of_cumulative_count_less_than(70.0), (5, 50.0));
+        expect_that!(h.index_of_cumulative_count_less_than(-10.0), eq((0, 0.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(0.0), eq((0, 0.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(1.0), eq((0, 0.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(5.0), eq((0, 0.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(6.0), eq((1, 5.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(11.0), eq((1, 5.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(14.0), eq((1, 5.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(15.0), eq((2, 14.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(18.0), eq((2, 14.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(21.5), eq((2, 14.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(22.0), eq((3, 21.5)));
+        expect_that!(h.index_of_cumulative_count_less_than(60.0), eq((5, 50.0)));
+        expect_that!(h.index_of_cumulative_count_less_than(70.0), eq((5, 50.0)));
     }
 
-    #[test]
+    #[gtest]
     fn quantile_empty() {
         let h = Histogram::new(5);
 
-        assert_eq!(h.quantile(0.0), None);
-        assert_eq!(h.quantile(0.5), None);
-        assert_eq!(h.quantile(1.0), None);
+        expect_that!(h.quantile(0.0), none());
+        expect_that!(h.quantile(0.5), none());
+        expect_that!(h.quantile(1.0), none());
     }
 
     #[test]
@@ -714,8 +723,15 @@ mod tests {
         h.quantile(-0.1);
     }
 
-    #[test]
-    fn quantile() {
+    #[test_case(0.0, 2.0, 0.0)]
+    #[test_case(0.1, 8.3, 0.4)]
+    #[test_case(0.25, 11.5, 0.1)]
+    #[test_case(0.5, 21.0, 0.1)]
+    #[test_case(0.75, 31.5, 0.1)]
+    #[test_case(0.9, 36.9, 0.1)]
+    #[test_case(0.99, 44.19, 0.1)]
+    #[test_case(1.0, 45.0, 0.0)]
+    fn quantile(q: f64, expected_value: f64, max_error_ratio: f64) {
         let bins = vec![
             Bin::new(2.0, 1),
             Bin::new(9.5, 2),
@@ -725,35 +741,23 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(2.0), Some(45.0));
 
-        let expected = vec![
-            // quantile, expected value, max relative difference
-            (0.0, 2.0, 0.0),
-            (0.1, 8.3, 0.4),
-            (0.25, 11.5, 0.1),
-            (0.5, 21.0, 0.1),
-            (0.75, 31.5, 0.1),
-            (0.9, 36.9, 0.1),
-            (0.99, 44.19, 0.1),
-            (1.0, 45.0, 0.0),
-        ];
-        for (q, expected_value, max_relative) in expected {
-            assert_relative_eq!(
-                h.quantile(q).unwrap(),
-                expected_value,
-                max_relative = max_relative
-            );
-        }
+        let actual = h.quantile(q).unwrap();
+        assert_that!(actual, not(is_nan()));
+        assert_that!(actual, is_finite());
+
+        let tolerance = max_error_ratio * expected_value.abs().max(actual.abs());
+        assert_that!(actual, near(expected_value, tolerance));
     }
 
-    #[test]
+    #[gtest]
     fn count_less_than_or_equal_to_empty() {
         let h = Histogram::new(5);
 
-        assert_eq!(h.count_less_than_or_equal_to(-42.0), 0);
-        assert_eq!(h.count_less_than_or_equal_to(0.0), 0);
-        assert_eq!(h.count_less_than_or_equal_to(42.0), 0);
-        assert_eq!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), 0);
-        assert_eq!(h.count_less_than_or_equal_to(std::f64::INFINITY), 0);
+        expect_that!(h.count_less_than_or_equal_to(-42.0), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(0.0), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(42.0), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(std::f64::INFINITY), eq(0));
     }
 
     #[test]
@@ -763,7 +767,7 @@ mod tests {
         h.count_less_than_or_equal_to(std::f64::NAN);
     }
 
-    #[test]
+    #[gtest]
     fn count_less_than_or_equal_to() {
         let bins = vec![
             Bin::new(2.0, 1),
@@ -774,36 +778,36 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(2.0), Some(45.0));
 
-        assert_eq!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), 0);
-        assert_eq!(h.count_less_than_or_equal_to(-42.0), 0);
-        assert_eq!(h.count_less_than_or_equal_to(0.0), 0);
-        assert_eq!(h.count_less_than_or_equal_to(2.1), 1);
-        assert_eq!(h.count_less_than_or_equal_to(10.0), 2);
-        assert_eq!(h.count_less_than_or_equal_to(15.0), 3);
-        assert_eq!(h.count_less_than_or_equal_to(25.0), 6);
-        assert_eq!(h.count_less_than_or_equal_to(38.0), 9);
-        assert_eq!(h.count_less_than_or_equal_to(45.0), 10);
-        assert_eq!(h.count_less_than_or_equal_to(std::f64::INFINITY), 10);
+        expect_that!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(-42.0), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(0.0), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(2.1), eq(1));
+        expect_that!(h.count_less_than_or_equal_to(10.0), eq(2));
+        expect_that!(h.count_less_than_or_equal_to(15.0), eq(3));
+        expect_that!(h.count_less_than_or_equal_to(25.0), eq(6));
+        expect_that!(h.count_less_than_or_equal_to(38.0), eq(9));
+        expect_that!(h.count_less_than_or_equal_to(45.0), eq(10));
+        expect_that!(h.count_less_than_or_equal_to(std::f64::INFINITY), eq(10));
     }
 
-    #[test]
+    #[gtest]
     fn count_less_than_or_equal_to_min() {
         let h = Histogram::from_iter(3, &[1.0, 2.0, 3.0]);
 
-        assert_eq!(h.count_less_than_or_equal_to(1.0), 1);
+        expect_that!(h.count_less_than_or_equal_to(1.0), eq(1));
     }
 
-    #[test]
+    #[gtest]
     fn count_less_than_or_equal_to_duplicate_min() {
         let h = Histogram::from_iter(5, &[1.0, 1.0, 2.0]);
 
-        assert_eq!(h.count_less_than_or_equal_to(1.0), 2);
+        expect_that!(h.count_less_than_or_equal_to(1.0), eq(2));
     }
 
-    #[test]
+    #[gtest]
     fn count_less_than_or_equal_to_duplicate_interior_value() {
         let h = Histogram::from_iter(5, &[1.0, 2.0, 2.0, 3.0]);
 
-        assert_eq!(h.count_less_than_or_equal_to(2.0), 3);
+        expect_that!(h.count_less_than_or_equal_to(2.0), eq(3));
     }
 }
