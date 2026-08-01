@@ -1,7 +1,6 @@
 use std::borrow::Borrow;
 
 use ordered_float::OrderedFloat;
-use superslice::*;
 
 use crate::bin::Bin;
 
@@ -287,7 +286,8 @@ impl Histogram {
         // the configured size, the histogram is shrunk by merging two closest bins to restore
         // the invariant
         let bin = value.into();
-        self.bins.insert(self.bins.upper_bound(&bin), bin);
+        self.bins
+            .insert(self.bins.partition_point(|x| x <= &bin), bin);
         self.shrink();
         self.track_min_max(bin.value());
     }
