@@ -152,19 +152,19 @@ mod tests {
     #[test]
     #[should_panic(expected = "value must not be NaN")]
     fn new_invalid_value_nan() {
-        Bin::new(std::f64::NAN, 84);
+        Bin::new(f64::NAN, 84);
     }
 
     #[test]
     #[should_panic(expected = "value must be finite")]
     fn new_invalid_value_positive_infinity() {
-        Bin::new(std::f64::INFINITY, 84);
+        Bin::new(f64::INFINITY, 84);
     }
 
     #[test]
     #[should_panic(expected = "value must be finite")]
     fn new_invalid_value_negative_infinity() {
-        Bin::new(std::f64::NEG_INFINITY, 84);
+        Bin::new(f64::NEG_INFINITY, 84);
     }
 
     #[gtest]
@@ -241,12 +241,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "value must not be NaN")]
     fn from_nan() {
-        let _ = Bin::from(std::f64::NAN);
+        let _ = Bin::from(f64::NAN);
     }
 
     #[test]
     #[should_panic(expected = "value must be finite")]
     fn from_infinite() {
-        let _ = Bin::from(std::f64::INFINITY);
+        let _ = Bin::from(f64::INFINITY);
     }
 }
