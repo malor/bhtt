@@ -706,7 +706,7 @@ mod tests {
     #[should_panic(expected = "q must be in the range [0.0; 1.0]")]
     fn quantile_nan() {
         let h = Histogram::new(5);
-        h.quantile(std::f64::NAN);
+        h.quantile(f64::NAN);
     }
 
     #[test]
@@ -756,15 +756,15 @@ mod tests {
         expect_that!(h.count_less_than_or_equal_to(-42.0), eq(0));
         expect_that!(h.count_less_than_or_equal_to(0.0), eq(0));
         expect_that!(h.count_less_than_or_equal_to(42.0), eq(0));
-        expect_that!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), eq(0));
-        expect_that!(h.count_less_than_or_equal_to(std::f64::INFINITY), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(f64::NEG_INFINITY), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(f64::INFINITY), eq(0));
     }
 
     #[test]
     #[should_panic(expected = "value must not be NaN")]
     fn count_less_than_or_equal_to_nan() {
         let h = Histogram::new(5);
-        h.count_less_than_or_equal_to(std::f64::NAN);
+        h.count_less_than_or_equal_to(f64::NAN);
     }
 
     #[gtest]
@@ -778,7 +778,7 @@ mod tests {
         ];
         let h = histogram_from_parts(5, bins, Some(2.0), Some(45.0));
 
-        expect_that!(h.count_less_than_or_equal_to(std::f64::NEG_INFINITY), eq(0));
+        expect_that!(h.count_less_than_or_equal_to(f64::NEG_INFINITY), eq(0));
         expect_that!(h.count_less_than_or_equal_to(-42.0), eq(0));
         expect_that!(h.count_less_than_or_equal_to(0.0), eq(0));
         expect_that!(h.count_less_than_or_equal_to(2.1), eq(1));
@@ -787,7 +787,7 @@ mod tests {
         expect_that!(h.count_less_than_or_equal_to(25.0), eq(6));
         expect_that!(h.count_less_than_or_equal_to(38.0), eq(9));
         expect_that!(h.count_less_than_or_equal_to(45.0), eq(10));
-        expect_that!(h.count_less_than_or_equal_to(std::f64::INFINITY), eq(10));
+        expect_that!(h.count_less_than_or_equal_to(f64::INFINITY), eq(10));
     }
 
     #[gtest]
